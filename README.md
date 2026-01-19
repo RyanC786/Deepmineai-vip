@@ -793,3 +793,4 @@ Use code **FIO3081** when registering for exclusive benefits!
 5. System verifies code → redirects to login page
 6. User can now login and access platform
 
+# Environment variables configured
