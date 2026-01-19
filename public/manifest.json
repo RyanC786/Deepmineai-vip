@@ -1,0 +1,55 @@
+{
+  "name": "DeepMine AI - Cloud Mining Platform",
+  "short_name": "DeepMine AI",
+  "description": "AI-powered cloud mining platform for cryptocurrency. Track your mining operations, earnings, and manage your account.",
+  "start_url": "/dashboard?source=pwa",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#2979FF",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/static/dragon-logo-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/dragon-logo-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/dragon-logo-v2.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your mining dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/static/dragon-logo-v2.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Deposit",
+      "short_name": "Deposit",
+      "description": "Make a deposit",
+      "url": "/deposit",
+      "icons": [{ "src": "/static/dragon-logo-v2.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Withdraw",
+      "short_name": "Withdraw",
+      "description": "Withdraw funds",
+      "url": "/withdraw",
+      "icons": [{ "src": "/static/dragon-logo-v2.png", "sizes": "192x192" }]
+    }
+  ]
+}

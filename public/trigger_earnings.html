@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trigger Daily Earnings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">💰 Trigger Daily Earnings Calculation</h1>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <p class="text-yellow-700">
+                <strong>⚠️ Admin Only:</strong> This will calculate and distribute daily earnings to all active machines.
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-gray-700 font-medium mb-2">Admin Email:</label>
+            <input type="email" id="adminEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="admin@deepmineai.vip">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-gray-700 font-medium mb-2">Admin Password:</label>
+            <input type="password" id="adminPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Enter admin password">
+        </div>
+
+        <button onclick="triggerEarnings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+            🚀 Calculate & Distribute Daily Earnings
+        </button>
+
+        <div id="result" class="mt-6"></div>
+    </div>
+
+    <script>
+        async function triggerEarnings() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!email || !password) {
+                resultDiv.innerHTML = '<div class="bg-red-50 border-l-4 border-red-400 p-4"><p class="text-red-700">❌ Please enter admin email and password</p></div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="bg-blue-50 border-l-4 border-blue-400 p-4"><p class="text-blue-700">⏳ Logging in and calculating earnings...</p></div>';
+
+            try {
+                // Step 1: Login as admin
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!loginResponse.ok) {
+                    throw new Error('Invalid admin credentials');
+                }
+
+                const loginData = await loginResponse.json();
+                const token = loginData.token;
+
+                // Step 2: Trigger earnings calculation
+                const earningsResponse = await fetch('/api/earnings/calculate-daily', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!earningsResponse.ok) {
+                    throw new Error('Failed to calculate earnings');
+                }
+
+                const earningsData = await earningsResponse.json();
+
+                if (earningsData.success) {
+                    resultDiv.innerHTML = `
+                        <div class="bg-green-50 border-l-4 border-green-400 p-4">
+                            <h3 class="text-green-800 font-bold text-lg mb-2">✅ SUCCESS!</h3>
+                            <ul class="text-green-700 space-y-1">
+                                <li>📅 <strong>Date:</strong> ${earningsData.date}</li>
+                                <li>🤖 <strong>Machines Processed:</strong> ${earningsData.processed_machines}</li>
+                                <li>💵 <strong>Total Distributed:</strong> $${earningsData.total_distributed}</li>
+                                ${earningsData.errors ? `<li class="text-red-600">⚠️ <strong>Errors:</strong> ${earningsData.errors}</li>` : ''}
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(earningsData.message || 'Earnings calculation failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="bg-red-50 border-l-4 border-red-400 p-4"><p class="text-red-700">❌ <strong>Error:</strong> ${error.message}</p></div>`;
+            }
+        }
+    </script>
+</body>
+</html>

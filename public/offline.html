@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - DeepMine AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: #33F0FF;
+        }
+
+        p {
+            font-size: 18px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        .retry-button {
+            margin-top: 32px;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #2979FF, #33F0FF);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .retry-button:hover {
+            transform: scale(1.05);
+        }
+
+        .retry-button:active {
+            transform: scale(0.95);
+        }
+
+        .features {
+            margin-top: 40px;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 24px;
+            border-radius: 16px;
+        }
+
+        .features h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #33F0FF;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10B981;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="icon">📡</div>
+        <h1>You're Offline</h1>
+        <p>It looks like you have lost your internet connection.</p>
+        <p>Please check your network and try again.</p>
+        
+        <button class="retry-button" onclick="location.reload()">
+            Retry Connection
+        </button>
+
+        <div class="features">
+            <h2>What you can do offline:</h2>
+            <ul>
+                <li>View your cached dashboard data</li>
+                <li>Browse previously loaded pages</li>
+                <li>Access mining package information</li>
+                <li>View your profile information</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status
+        window.addEventListener('online', () => {
+            console.log('Back online!');
+            location.reload();
+        });
+
+        // Show connection status
+        if (!navigator.onLine) {
+            console.log('Currently offline');
+        }
+    </script>
+</body>
+</html>

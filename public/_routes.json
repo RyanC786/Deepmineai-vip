@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/static/*",
+    "/terms.pdf",
+    "/terms.txt",
+    "/test_lead_create.html",
+    "/trigger_earnings.html",
+    "/manifest.json",
+    "/sw.js",
+    "/offline.html"
+  ]
+}

@@ -1,0 +1,836 @@
+/**
+ * DeepMine AI - Staff Profile Page
+ * Detailed staff member view with notes and activity history
+ */
+
+import { CRM_SIDEBAR_PERMISSION_SCRIPT } from '../components/crm-sidebar-permissions';
+
+export const adminStaffProfileHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Profile - DeepMine Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar-link:hover { background-color: rgba(59, 130, 246, 0.1); }
+        .sidebar-link.active { background-color: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; }
+        .tab-button.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .note-card { transition: all 0.2s; }
+        .note-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold text-blue-400">
+                    <i class="fas fa-gem mr-2"></i>DeepMine CRM
+                </h1>
+            </div>
+            <nav class="mt-6">
+                <div class="px-6 py-2 text-xs font-semibold text-gray-500 uppercase">Main</div>
+                <a href="/admin/crm/dashboard" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-chart-line mr-3 w-5"></i>Dashboard
+                </a>
+                
+                <div class="px-6 py-2 mt-4 text-xs font-semibold text-gray-500 uppercase">CRM</div>
+                <a href="/admin/crm/staff" class="sidebar-link active flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-users mr-3 w-5"></i>Staff
+                </a>
+                <a href="/admin/crm/tasks" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-tasks mr-3 w-5"></i>Tasks
+                </a>
+                <a href="/admin/crm/tickets" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-ticket-alt mr-3 w-5"></i>Support Tickets
+                </a>
+                <a href="/admin/crm/activity-logs" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-history mr-3 w-5"></i>Activity Logs
+                </a>
+                
+                <div class="px-6 py-2 mt-4 text-xs font-semibold text-gray-500 uppercase">Admin</div>
+                <a href="/admin/kyc" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-id-card mr-3 w-5"></i>KYC
+                </a>
+                <a href="/admin/panel/withdrawals" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-money-bill-wave mr-3 w-5"></i>Withdrawals
+                </a>
+                <a href="/admin/reports" class="sidebar-link flex items-center px-6 py-3 text-gray-300">
+                    <i class="fas fa-chart-bar mr-3 w-5"></i>Reports
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-gray-800 border-b border-gray-700 px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <a href="/admin/crm/staff" class="text-blue-400 hover:text-blue-300 mb-2 inline-block">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to Staff List
+                        </a>
+                        <h2 class="text-3xl font-bold text-white" id="pageTitle">Staff Profile</h2>
+                    </div>
+                    <button onclick="editStaff()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-edit mr-2"></i>Edit Profile
+                    </button>
+                </div>
+            </header>
+
+            <!-- Profile Content -->
+            <div class="p-8" id="profileContainer">
+                <!-- Loading State -->
+                <div class="text-center py-12" id="loadingState">
+                    <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                    <p class="mt-4 text-gray-400">Loading profile...</p>
+                </div>
+
+                <!-- Profile Content (hidden initially) -->
+                <div id="profileContent" style="display: none;">
+                    <!-- Profile Header Card -->
+                    <div class="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
+                        <div class="flex items-start gap-6">
+                            <div class="bg-blue-600 rounded-full w-24 h-24 flex items-center justify-center text-3xl font-bold">
+                                <span id="profileInitials">--</span>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-2xl font-bold text-white mb-2" id="profileName">--</h3>
+                                <p class="text-gray-400 mb-4" id="profileEmail">--</p>
+                                <div class="flex gap-4 flex-wrap">
+                                    <span class="px-3 py-1 rounded-full text-sm bg-blue-900 text-blue-200" id="profileRole">
+                                        <i class="fas fa-user-shield mr-2"></i>Role: --
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-sm bg-purple-900 text-purple-200" id="profileDepartment">
+                                        <i class="fas fa-building mr-2"></i>Department: --
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-sm" id="profileStatus">
+                                        <i class="fas fa-circle mr-2"></i>Status: --
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-400">Member Since</p>
+                                <p class="text-lg font-semibold" id="profileJoined">--</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="border-b border-gray-700 mb-6">
+                        <div class="flex gap-6">
+                            <button class="tab-button active px-4 py-3 font-medium transition-colors" onclick="switchTab('overview')">
+                                <i class="fas fa-info-circle mr-2"></i>Overview
+                            </button>
+                            <button class="tab-button px-4 py-3 font-medium transition-colors text-gray-400" onclick="switchTab('notes')">
+                                <i class="fas fa-sticky-note mr-2"></i>Internal Notes
+                            </button>
+                            <button class="tab-button px-4 py-3 font-medium transition-colors text-gray-400" onclick="switchTab('activity')">
+                                <i class="fas fa-history mr-2"></i>Activity History
+                            </button>
+                            <button class="tab-button px-4 py-3 font-medium transition-colors text-gray-400" onclick="switchTab('permissions')">
+                                <i class="fas fa-lock mr-2"></i>Permissions
+                            </button>
+                            <button class="tab-button px-4 py-3 font-medium transition-colors text-gray-400" onclick="switchTab('security')">
+                                <i class="fas fa-key mr-2"></i>Security
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div id="tabContent">
+                        <!-- Overview Tab -->
+                        <div id="overviewTab" class="tab-content">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Contact Information -->
+                                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                    <h4 class="text-xl font-bold mb-4 text-white">
+                                        <i class="fas fa-address-card mr-2 text-blue-400"></i>Contact Information
+                                    </h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <p class="text-sm text-gray-400">Email</p>
+                                            <p class="text-white" id="detailEmail">--</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-400">Phone</p>
+                                            <p class="text-white" id="detailPhone">--</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-400">Timezone</p>
+                                            <p class="text-white" id="detailTimezone">--</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Work Information -->
+                                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                    <h4 class="text-xl font-bold mb-4 text-white">
+                                        <i class="fas fa-briefcase mr-2 text-blue-400"></i>Work Information
+                                    </h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <p class="text-sm text-gray-400">Department</p>
+                                            <p class="text-white" id="detailDepartment">--</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-400">Role</p>
+                                            <p class="text-white" id="detailRole">--</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-400">Status</p>
+                                            <p class="text-white" id="detailStatus">--</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-400">Reports To</p>
+                                            <p class="text-white" id="detailReportsTo">--</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                    <h4 class="text-xl font-bold mb-4 text-white">
+                                        <i class="fas fa-chart-bar mr-2 text-blue-400"></i>Quick Stats
+                                    </h4>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">Total Tasks</span>
+                                            <span class="text-white font-semibold" id="statTotalTasks">0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">Completed Tasks</span>
+                                            <span class="text-white font-semibold" id="statCompletedTasks">0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">Internal Notes</span>
+                                            <span class="text-white font-semibold" id="statNotes">0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">Last Activity</span>
+                                            <span class="text-white font-semibold" id="statLastActivity">Never</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recent Activity Preview -->
+                                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                    <h4 class="text-xl font-bold mb-4 text-white">
+                                        <i class="fas fa-clock mr-2 text-blue-400"></i>Recent Activity
+                                    </h4>
+                                    <div id="recentActivityPreview" class="space-y-2">
+                                        <p class="text-gray-400 text-sm">No recent activity</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Internal Notes Tab -->
+                        <div id="notesTab" class="tab-content" style="display: none;">
+                            <!-- Add Note Form -->
+                            <div class="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
+                                <h4 class="text-xl font-bold mb-4 text-white">
+                                    <i class="fas fa-plus-circle mr-2 text-blue-400"></i>Add Internal Note
+                                </h4>
+                                <form id="addNoteForm" onsubmit="addNote(event)">
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-2">Note Category</label>
+                                        <select id="noteCategory" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white" required>
+                                            <option value="general">General</option>
+                                            <option value="performance">Performance</option>
+                                            <option value="training">Training</option>
+                                            <option value="feedback">Feedback</option>
+                                            <option value="warning">Warning</option>
+                                            <option value="achievement">Achievement</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-2">Note Content</label>
+                                        <textarea id="noteContent" rows="4" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white" placeholder="Enter your note..." required></textarea>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="notePrivate" class="mr-2">
+                                            <span class="text-sm">Mark as private (only admins can see)</span>
+                                        </label>
+                                    </div>
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                                        <i class="fas fa-save mr-2"></i>Save Note
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Notes List -->
+                            <div id="notesList">
+                                <div class="text-center py-8">
+                                    <i class="fas fa-spinner fa-spin text-2xl text-blue-400"></i>
+                                    <p class="mt-2 text-gray-400">Loading notes...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity History Tab -->
+                        <div id="activityTab" class="tab-content" style="display: none;">
+                            <div id="activityList">
+                                <div class="text-center py-8">
+                                    <i class="fas fa-spinner fa-spin text-2xl text-blue-400"></i>
+                                    <p class="mt-2 text-gray-400">Loading activity...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Permissions Tab -->
+                        <div id="permissionsTab" class="tab-content" style="display: none;">
+                            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                <h4 class="text-xl font-bold mb-4 text-white">
+                                    <i class="fas fa-shield-alt mr-2 text-blue-400"></i>Role Permissions
+                                </h4>
+                                <div id="permissionsList" class="space-y-3">
+                                    <p class="text-gray-400">Loading permissions...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Tab -->
+                        <div id="securityTab" class="tab-content" style="display: none;">
+                            <!-- Change Password Form -->
+                            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                <h4 class="text-xl font-bold mb-4 text-white">
+                                    <i class="fas fa-key mr-2 text-green-400"></i>Change Password
+                                </h4>
+                                
+                                <!-- Success/Error Messages -->
+                                <div id="passwordChangeAlert" class="hidden mb-4 p-4 rounded-lg"></div>
+                                
+                                <form id="changePasswordForm" onsubmit="changePassword(event)" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2 text-gray-300">
+                                            <i class="fas fa-lock mr-2"></i>Current Password
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            id="currentPassword" 
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" 
+                                            placeholder="Enter your current password"
+                                            required
+                                        >
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2 text-gray-300">
+                                            <i class="fas fa-key mr-2"></i>New Password
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            id="newPassword" 
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" 
+                                            placeholder="Enter your new password (min 8 characters)"
+                                            minlength="8"
+                                            required
+                                        >
+                                        <p class="text-xs text-gray-400 mt-1">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Must be at least 8 characters long
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2 text-gray-300">
+                                            <i class="fas fa-check-circle mr-2"></i>Confirm New Password
+                                        </label>
+                                        <input 
+                                            type="password" 
+                                            id="confirmPassword" 
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" 
+                                            placeholder="Re-enter your new password"
+                                            minlength="8"
+                                            required
+                                        >
+                                    </div>
+                                    
+                                    <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded-lg p-4">
+                                        <h5 class="text-sm font-semibold text-yellow-400 mb-2">
+                                            <i class="fas fa-exclamation-triangle mr-2"></i>Password Security Tips
+                                        </h5>
+                                        <ul class="text-xs text-yellow-300 space-y-1">
+                                            <li><i class="fas fa-check mr-2"></i>Use a combination of letters, numbers, and symbols</li>
+                                            <li><i class="fas fa-check mr-2"></i>Avoid using personal information</li>
+                                            <li><i class="fas fa-check mr-2"></i>Don't reuse passwords from other accounts</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="flex gap-3">
+                                        <button 
+                                            type="submit" 
+                                            id="changePasswordBtn"
+                                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+                                        >
+                                            <i class="fas fa-save mr-2"></i>Change Password
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onclick="document.getElementById('changePasswordForm').reset(); showPasswordAlert('', '')"
+                                            class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+                                        >
+                                            <i class="fas fa-times mr-2"></i>Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Password History (Optional) -->
+                            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mt-6">
+                                <h4 class="text-xl font-bold mb-4 text-white">
+                                    <i class="fas fa-history mr-2 text-blue-400"></i>Security Information
+                                </h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center py-2 border-b border-gray-700">
+                                        <span class="text-gray-400">Last Password Change</span>
+                                        <span class="text-white font-semibold" id="lastPasswordChange">Never</span>
+                                    </div>
+                                    <div class="flex justify-between items-center py-2 border-b border-gray-700">
+                                        <span class="text-gray-400">Account Created</span>
+                                        <span class="text-white font-semibold" id="accountCreated">--</span>
+                                    </div>
+                                    <div class="flex justify-between items-center py-2">
+                                        <span class="text-gray-400">Last Login</span>
+                                        <span class="text-white font-semibold" id="lastLoginSecurity">Never</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentStaffId = null;
+        let currentTab = 'overview';
+
+        // Get staff ID from URL
+        function getStaffIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // Load staff profile
+        async function loadProfile() {
+            currentStaffId = getStaffIdFromUrl();
+            
+            if (!currentStaffId) {
+                alert('No staff ID provided');
+                window.location.href = '/admin/crm/staff';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/crm/staff/' + currentStaffId, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    displayProfile(data.data);
+                    loadStats();
+                } else {
+                    alert('Failed to load profile: ' + (data.error || data.message || 'Unknown error'));
+                    document.getElementById('loadingState').innerHTML = '<p class="text-red-400">Failed to load profile</p>';
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                alert('Failed to load profile: ' + error.message);
+                document.getElementById('loadingState').innerHTML = '<p class="text-red-400">Failed to load profile</p>';
+            }
+        }
+
+        // Display profile data
+        function displayProfile(staff) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
+
+            // Profile header
+            const initials = staff.full_name ? staff.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : '??';
+            document.getElementById('profileInitials').textContent = initials;
+            document.getElementById('profileName').textContent = staff.full_name || 'Unknown';
+            document.getElementById('profileEmail').textContent = staff.email || '--';
+            document.getElementById('profileRole').innerHTML = '<i class="fas fa-user-shield mr-2"></i>Role: ' + (staff.role || 'N/A');
+            document.getElementById('profileDepartment').innerHTML = '<i class="fas fa-building mr-2"></i>Department: ' + (staff.department || 'N/A');
+            
+            const statusColor = staff.status === 'active' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200';
+            document.getElementById('profileStatus').className = 'px-3 py-1 rounded-full text-sm ' + statusColor;
+            document.getElementById('profileStatus').innerHTML = '<i class="fas fa-circle mr-2"></i>Status: ' + (staff.status || 'N/A');
+            
+            document.getElementById('profileJoined').textContent = staff.created_at ? new Date(staff.created_at).toLocaleDateString() : '--';
+
+            // Detail cards
+            document.getElementById('detailEmail').textContent = staff.email || '--';
+            document.getElementById('detailPhone').textContent = staff.phone || 'Not provided';
+            document.getElementById('detailTimezone').textContent = staff.timezone || 'Not set';
+            document.getElementById('detailDepartment').textContent = staff.department || '--';
+            document.getElementById('detailRole').textContent = staff.role || '--';
+            document.getElementById('detailStatus').textContent = staff.status || '--';
+            document.getElementById('detailReportsTo').textContent = staff.reports_to || 'None';
+
+            document.getElementById('pageTitle').textContent = staff.full_name + ' - Profile';
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                // Load notes count
+                const notesResponse = await fetch('/api/crm/notes/staff/' + currentStaffId + '?limit=1', {
+                    credentials: 'include'
+                });
+                const notesData = await notesResponse.json();
+                if (notesData.success) {
+                    document.getElementById('statNotes').textContent = notesData.data.pagination.total;
+                }
+
+                // Load activity
+                const activityResponse = await fetch('/api/crm/activity-logs/staff/' + currentStaffId + '?limit=5', {
+                    credentials: 'include'
+                });
+                const activityData = await activityResponse.json();
+                if (activityData.success && activityData.data.logs.length > 0) {
+                    const lastActivity = activityData.data.logs[0];
+                    document.getElementById('statLastActivity').textContent = new Date(lastActivity.created_at).toLocaleDateString();
+                    
+                    // Show recent activity preview
+                    const preview = activityData.data.logs.slice(0, 3).map(log => 
+                        '<div class="text-sm py-1"><span class="text-gray-400">' + 
+                        new Date(log.created_at).toLocaleDateString() + 
+                        ':</span> <span class="text-white">' + log.action + '</span></div>'
+                    ).join('');
+                    document.getElementById('recentActivityPreview').innerHTML = preview;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active', 'text-blue-400');
+                btn.classList.add('text-gray-400');
+            });
+            event.target.classList.add('active', 'text-blue-400');
+            event.target.classList.remove('text-gray-400');
+
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+
+            // Show selected tab
+            if (tab === 'overview') {
+                document.getElementById('overviewTab').style.display = 'block';
+            } else if (tab === 'notes') {
+                document.getElementById('notesTab').style.display = 'block';
+                loadNotes();
+            } else if (tab === 'activity') {
+                document.getElementById('activityTab').style.display = 'block';
+                loadActivity();
+            } else if (tab === 'permissions') {
+                document.getElementById('permissionsTab').style.display = 'block';
+                loadPermissions();
+            }
+        }
+
+        // Load notes
+        async function loadNotes() {
+            try {
+                const response = await fetch('/api/crm/notes/staff/' + currentStaffId + '?limit=50', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    displayNotes(data.data.notes);
+                } else {
+                    document.getElementById('notesList').innerHTML = '<p class="text-red-400">Failed to load notes</p>';
+                }
+            } catch (error) {
+                console.error('Error loading notes:', error);
+                document.getElementById('notesList').innerHTML = '<p class="text-red-400">Failed to load notes</p>';
+            }
+        }
+
+        // Display notes
+        function displayNotes(notes) {
+            if (notes.length === 0) {
+                document.getElementById('notesList').innerHTML = '<p class="text-gray-400 text-center py-8">No notes yet</p>';
+                return;
+            }
+
+            const notesHtml = notes.map(note => {
+                const categoryColors = {
+                    'general': 'bg-gray-700',
+                    'performance': 'bg-blue-700',
+                    'training': 'bg-purple-700',
+                    'feedback': 'bg-green-700',
+                    'warning': 'bg-red-700',
+                    'achievement': 'bg-yellow-700'
+                };
+                const categoryColor = categoryColors[note.category] || 'bg-gray-700';
+
+                return \`
+                    <div class="note-card bg-gray-800 rounded-lg p-4 mb-4 border border-gray-700">
+                        <div class="flex items-start justify-between mb-2">
+                            <span class="px-3 py-1 rounded-full text-xs \${categoryColor}">\${note.category}</span>
+                            <div class="flex gap-2">
+                                \${note.is_private ? '<span class="text-yellow-400" title="Private"><i class="fas fa-lock"></i></span>' : ''}
+                                <button onclick="deleteNote(\${note.id})" class="text-red-400 hover:text-red-300">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-white mb-2">\${note.content}</p>
+                        <div class="flex items-center gap-4 text-sm text-gray-400">
+                            <span><i class="fas fa-user mr-1"></i>\${note.created_by_name || 'Unknown'}</span>
+                            <span><i class="fas fa-clock mr-1"></i>\${new Date(note.created_at).toLocaleString()}</span>
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+
+            document.getElementById('notesList').innerHTML = notesHtml;
+        }
+
+        // Add note
+        async function addNote(event) {
+            event.preventDefault();
+
+            const category = document.getElementById('noteCategory').value;
+            const content = document.getElementById('noteContent').value;
+            const isPrivate = document.getElementById('notePrivate').checked;
+
+            try {
+                const response = await fetch('/api/crm/notes/create', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        related_to_type: 'staff',
+                        related_to_id: currentStaffId,
+                        category,
+                        content,
+                        is_private: isPrivate
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('addNoteForm').reset();
+                    loadNotes();
+                    loadStats();
+                    alert('Note added successfully');
+                } else {
+                    alert('Failed to add note: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error adding note:', error);
+                alert('Failed to add note');
+            }
+        }
+
+        // Delete note
+        async function deleteNote(noteId) {
+            if (!confirm('Are you sure you want to delete this note?')) return;
+
+            try {
+                const response = await fetch('/api/crm/notes/' + noteId, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadNotes();
+                    loadStats();
+                    alert('Note deleted successfully');
+                } else {
+                    alert('Failed to delete note: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                alert('Failed to delete note');
+            }
+        }
+
+        // Load activity
+        async function loadActivity() {
+            try {
+                const response = await fetch('/api/crm/activity-logs/staff/' + currentStaffId + '?limit=50', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    displayActivity(data.data.logs);
+                } else {
+                    document.getElementById('activityList').innerHTML = '<p class="text-red-400">Failed to load activity</p>';
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                document.getElementById('activityList').innerHTML = '<p class="text-red-400">Failed to load activity</p>';
+            }
+        }
+
+        // Display activity
+        function displayActivity(logs) {
+            if (logs.length === 0) {
+                document.getElementById('activityList').innerHTML = '<p class="text-gray-400 text-center py-8">No activity yet</p>';
+                return;
+            }
+
+            const activityHtml = logs.map(log => \`
+                <div class="bg-gray-800 rounded-lg p-4 mb-3 border border-gray-700">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <p class="text-white font-medium">\${log.action}</p>
+                            \${log.details ? '<p class="text-gray-400 text-sm mt-1">' + log.details + '</p>' : ''}
+                            <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                                <span><i class="fas fa-user mr-1"></i>\${log.actor_name || 'System'}</span>
+                                <span><i class="fas fa-clock mr-1"></i>\${new Date(log.created_at).toLocaleString()}</span>
+                                \${log.resource_type ? '<span><i class="fas fa-tag mr-1"></i>' + log.resource_type + '</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`).join('');
+
+            document.getElementById('activityList').innerHTML = activityHtml;
+        }
+
+        // Load permissions
+        function loadPermissions() {
+            // This would typically fetch from an API
+            // For now, show role-based permissions
+            const permissions = {
+                'admin': ['Full System Access', 'User Management', 'KYC Management', 'Withdrawal Management', 'Staff Management', 'View Reports', 'System Configuration'],
+                'manager': ['User Management', 'KYC Management', 'Withdrawal Management', 'View Reports', 'Team Management'],
+                'agent': ['User Support', 'KYC Review', 'Withdrawal Processing', 'View User Data'],
+                'viewer': ['View Dashboard', 'View Reports', 'Read-Only Access']
+            };
+
+            const staffRole = document.getElementById('detailRole').textContent.toLowerCase();
+            const rolePermissions = permissions[staffRole] || ['No permissions defined'];
+
+            const permissionsHtml = rolePermissions.map(perm => \`
+                <div class="flex items-center gap-3 py-2">
+                    <i class="fas fa-check-circle text-green-400"></i>
+                    <span class="text-white">\${perm}</span>
+                </div>
+            \`).join('');
+
+            document.getElementById('permissionsList').innerHTML = permissionsHtml;
+        }
+
+        // Edit staff
+        function editStaff() {
+            window.location.href = '/admin/crm/staff?edit=' + currentStaffId;
+        }
+
+        // Show password change alert
+        function showPasswordAlert(message, type) {
+            const alert = document.getElementById('passwordChangeAlert');
+            if (!message) {
+                alert.classList.add('hidden');
+                return;
+            }
+            
+            alert.classList.remove('hidden');
+            alert.className = 'mb-4 p-4 rounded-lg';
+            
+            if (type === 'success') {
+                alert.classList.add('bg-green-900', 'bg-opacity-20', 'border', 'border-green-600', 'text-green-400');
+                alert.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + message;
+            } else {
+                alert.classList.add('bg-red-900', 'bg-opacity-20', 'border', 'border-red-600', 'text-red-400');
+                alert.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + message;
+            }
+        }
+
+        // Change password
+        async function changePassword(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const btn = document.getElementById('changePasswordBtn');
+            
+            // Validate inputs
+            if (newPassword !== confirmPassword) {
+                showPasswordAlert('New password and confirmation do not match', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showPasswordAlert('Password must be at least 8 characters long', 'error');
+                return;
+            }
+            
+            if (newPassword === currentPassword) {
+                showPasswordAlert('New password must be different from current password', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Changing Password...';
+            
+            try {
+                const response = await fetch('/api/crm/staff/me/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword,
+                        confirmPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showPasswordAlert('Password changed successfully! You can now use your new password to log in.', 'success');
+                    document.getElementById('changePasswordForm').reset();
+                    
+                    // Update last password change date
+                    document.getElementById('lastPasswordChange').textContent = 'Just now';
+                } else {
+                    showPasswordAlert(data.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showPasswordAlert('An error occurred while changing password. Please try again.', 'error');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i>Change Password';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+    
+      ${CRM_SIDEBAR_PERMISSION_SCRIPT}
+  </body>
+</html>
+`;

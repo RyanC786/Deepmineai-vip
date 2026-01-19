@@ -1,0 +1,68 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "webapp",
+  "compatibility_date": "2025-11-11",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "deepmine-production",
+      "database_id": "d1396742-feb6-47d4-b81c-dbe54eed7f4d"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KYC_BUCKET",
+      "bucket_name": "deepmine-kyc-documents"
+    }
+  ]
+  // ========================================
+  // CRON TRIGGERS - Automated Daily Earnings
+  // ========================================
+  // NOTE: For Cloudflare Pages, cron triggers CANNOT be set in wrangler.jsonc
+  // They must be configured via CLI command or Cloudflare Dashboard
+  //
+  // OPTION 1: Use Wrangler CLI (RECOMMENDED)
+  // Run this command to set up the cron trigger:
+  //   npx wrangler pages project create deepmine-ai --production-branch main
+  //   npx wrangler pages deployment create --project-name=deepmine-ai --branch=main
+  //
+  // OPTION 2: Keep using cron-job.org (CURRENT WORKING SOLUTION)
+  // Since cron-job.org is already working and crediting earnings properly,
+  // you can continue using it. The code is ready for native Cloudflare cron
+  // if/when it becomes available on your account.
+  //
+  // Expected Cron Schedule: "0 0 * * *" (Daily at midnight UTC)
+  // The scheduled() handler is exported from src/index.tsx and ready to use.
+  //
+  // Environment variables for local development should be in .dev.vars
+  // Production secrets should be set via: wrangler secret put RESEND_API_KEY
+  // "vars": {
+  //   "MY_VAR": "my-variable"
+  // },
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "MY_KV_NAMESPACE",
+  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  //   }
+  // ],
+  // "r2_buckets": [
+  //   {
+  //     "binding": "MY_BUCKET",
+  //     "bucket_name": "my-bucket"
+  //   }
+  // ],
+  // "d1_databases": [
+  //   {
+  //     "binding": "MY_DB",
+  //     "database_name": "my-database",
+  //     "database_id": ""
+  //   }
+  // ],
+  // "ai": {
+  //   "binding": "AI"
+  // }
+}

@@ -1,0 +1,165 @@
+DEEPMINE AI - TERMS OF SERVICE
+
+Last Updated: December 24, 2024
+
+1. Introduction
+
+Welcome to DeepMine AI. By accessing or using our cloud mining services, you agree to be bound by these Terms of Service. Please read them carefully before using our platform.
+
+DeepMine AI empowers users to harness AI and cloud mining for effortless daily profits. Our platform leverages advanced artificial intelligence to optimize cryptocurrency mining operations on the cloud.
+
+2. Service Description
+
+DeepMine AI provides cloud-based cryptocurrency mining services powered by artificial intelligence. Our services include:
+
+• AI-Powered Mining: Advanced algorithms optimize mining operations 24/7
+• Multiple Mining Servers: Access to various server configurations (H800, H200, A100, RTX 4090)
+• Automated Profit Generation: Daily profit generation based on your selected mining server
+• Affiliate Program: Earn fixed bonuses for referring new users
+• Daily Check-in Bonus: Claim $1 bonus daily before 5:00 PM UK time
+
+3. Transparency & Withdrawal Policy
+
+IMPORTANT: Our project is completely transparent, with no hidden mechanisms. Our only requirement is to guarantee that every user earns money.
+
+3.1 Withdrawal Availability
+Once your Daily Earnings exceed $100, you can request a withdrawal of your accumulated profits.
+
+3.2 Server Purchase
+When you purchase a mining server, you commit to the full contract duration.
+
+3.3 After Contract Completion
+Once your server contract period is complete (e.g., after 180 days), you have full flexibility to:
+• Withdraw your initial investment plus accumulated profits
+• Reinvest in a new or upgraded mining server
+• Transfer funds according to our withdrawal policies
+
+4. Account Registration
+
+To use DeepMine AI services, you must:
+• Be at least 18 years of age
+• Provide accurate and complete registration information
+• Maintain the security of your account credentials
+• Notify us immediately of any unauthorized access
+
+5. Investment & Minimum Requirements
+
+Our platform offers various mining servers with different investment levels:
+• Minimum Investment: Starting from $500 (RTX 4090 24G servers)
+• Maximum Investment: Up to $50,000 (H800 8400G servers)
+• Server Options: Range from entry-level RTX 4090 to high-performance H800 systems
+• Contract Periods: Typically 180 days with daily profit generation
+
+Each server generates different daily profits based on its computational power and configuration.
+
+6. Profit Distribution & Calculations
+
+Profits are calculated and distributed based on:
+• Your selected mining server's daily output (measured in M/d)
+• Real-time cryptocurrency market conditions
+• AI optimization efficiency
+• Network mining difficulty
+
+Daily profits are automatically credited to your account. You can track your earnings in real-time through our dashboard.
+
+7. Affiliate Program
+
+Our Affiliate Program rewards users who invite others:
+• Level 1: Earn a fixed $80 bonus for each direct affiliate's first server purchase.
+• Level 2: Earn a fixed $15 bonus for each second-level affiliate's first server purchase.
+• Commissions are calculated daily and added to your account
+• No limit on the number of affiliates you can make
+
+8. Daily Check-in Bonus
+
+Active users can claim a daily bonus:
+• $1 bonus available daily before 5:00 PM UK time
+• Must log in and manually claim the bonus each day
+• Unclaimed bonuses do not roll over to the next day
+• Bonus is immediately credited to your account upon claiming
+
+9. Withdrawal Policy
+
+Withdrawals are subject to the following conditions:
+• Withdrawals can be requested once Daily Earnings exceed $100.
+• After contract completion, withdrawals can be processed within 24-48 hours
+• Minimum withdrawal amount may apply
+• Withdrawal fees may be deducted based on the cryptocurrency network
+
+10. Risk Disclosure
+
+Cryptocurrency mining involves risks that users should understand:
+• Market Volatility: Cryptocurrency values fluctuate and may affect profit calculations
+• Mining Difficulty: Network difficulty adjustments may impact mining output
+• Technical Risks: Hardware or network issues may temporarily affect operations
+• Regulatory Changes: Cryptocurrency regulations may change in different jurisdictions
+• Commitment Period: Funds are committed for the contract duration.
+
+Past performance does not guarantee future results. Invest responsibly and only what you can afford to commit for the contract period.
+
+11. Prohibited Activities
+
+Users are strictly prohibited from:
+• Creating multiple accounts to abuse bonuses or affiliate programs
+• Using automated bots or scripts to manipulate the platform
+• Attempting to hack, disrupt, or compromise our systems
+• Engaging in fraudulent activities or money laundering
+• Misrepresenting or providing false information
+• Attempting to circumvent the withdrawal policy
+
+Violations may result in account suspension and forfeiture of funds.
+
+12. Service Availability
+
+We strive to maintain 99.9% uptime, but we cannot guarantee uninterrupted service. DeepMine AI reserves the right to:
+• Perform scheduled maintenance with advance notice
+• Suspend services temporarily for security or technical reasons
+• Update or modify features to improve user experience
+• Discontinue certain mining servers based on market conditions
+
+13. Privacy & Data Protection
+
+We take your privacy seriously:
+• Personal information is encrypted and stored securely
+• We never share your data with third parties without consent
+• KYC (Know Your Customer) verification may be required for large withdrawals
+• Transaction history is maintained for regulatory compliance
+
+For detailed information, please refer to our Privacy Policy.
+
+14. Limitation of Liability
+
+DeepMine AI and its affiliates shall not be liable for:
+• Losses resulting from cryptocurrency market volatility
+• Damages caused by user negligence or security breaches
+• Interruptions due to force majeure events
+• Third-party service failures (payment processors, exchanges, etc.)
+• Loss of profits or investment during the contracted period
+
+Our total liability is limited to the amount of your active investment on the platform.
+
+15. Modifications to Terms
+
+We reserve the right to modify these Terms of Service at any time. Changes will be:
+• Posted on this page with an updated "Last Updated" date
+• Notified to users via email or platform notifications
+• Effective immediately upon posting unless otherwise stated
+
+Continued use of the platform after changes constitutes acceptance of the modified terms.
+
+16. Governing Law
+
+Any disputes shall be resolved through arbitration in accordance with international arbitration rules.
+
+17. Contact Information
+
+For questions or concerns regarding these Terms of Service, please contact us:
+• Email: info@deepmineai.vip
+
+18. Acceptance of Terms
+
+By using DeepMine AI, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree with any part of these terms, please do not use our platform.
+
+---
+
+© 2024 DeepMine AI. All rights reserved.

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Lead Creation</title>
+</head>
+<body>
+    <h1>Test Lead Creation</h1>
+    <button onclick="testCreate()">Test Create Lead</button>
+    <pre id="result"></pre>
+    
+    <script>
+    async function testCreate() {
+        const leadData = {
+            first_name: "Test",
+            last_name: "User",
+            email: "test@example.com",
+            phone: "+1-555-1234",
+            company: "Test Corp",
+            source: "website",
+            status: "new",
+            score: 75,
+            tags: "test,demo"
+        };
+        
+        console.log('Sending:', leadData);
+        
+        try {
+            const response = await fetch('/api/crm/leads/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(leadData)
+            });
+            
+            const data = await response.json();
+            console.log('Response:', data);
+            document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('result').textContent = 'Error: ' + error.message;
+        }
+    }
+    </script>
+</body>
+</html>
