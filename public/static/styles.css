@@ -205,6 +205,9 @@ html {
     transform: translate(-50%, -50%);
     object-fit: cover;
     pointer-events: none;
+    /* Smooth edge blending */
+    mask-image: radial-gradient(ellipse 70% 60% at center, black 40%, transparent 95%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at center, black 40%, transparent 95%);
 }
 
 .video-overlay {
