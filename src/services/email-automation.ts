@@ -256,11 +256,11 @@ export class EmailAutomationService {
     const { results } = await this.db
       .prepare(
         `SELECT u.*, uas.*, 
-                COUNT(DISTINCT m.id) as machine_count,
+                COUNT(DISTINCT um.id) as machine_count,
                 COUNT(DISTINCT d.id) as deposit_count
          FROM users u
          JOIN user_automation_state uas ON u.id = uas.user_id
-         LEFT JOIN mining_packages m ON u.id = m.user_id
+         LEFT JOIN user_miners um ON u.id = um.user_id
          LEFT JOIN deposits d ON u.id = d.user_id AND d.status = 'approved'
          WHERE u.id = ?
          GROUP BY u.id`
