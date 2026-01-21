@@ -1401,7 +1401,7 @@ app.get('/', (c) => {
                         <h3>Send us a message</h3>
                         <form action="https://api.web3forms.com/submit" method="POST" id="contactForm">
                             <!-- Web3Forms Configuration -->
-                            <input type="hidden" name="access_key" value="fed24453-8693-4111-b33d-dafd654c6571">
+                            <input type="hidden" name="access_key" value="718f50bc-e3c4-4ca3-9bf3-1142715e3099">
                             <input type="hidden" name="subject" value="New Contact Form Submission - DeepMine AI">
                             <input type="hidden" name="from_name" value="DeepMine AI Website">
                             <input type="checkbox" name="botcheck" class="hidden" style="display: none;">
