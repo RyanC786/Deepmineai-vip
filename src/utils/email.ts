@@ -16,7 +16,17 @@ async function sendEmail(to: string, subject: string, html: string, apiKey: stri
         from: 'DeepMine AI <noreply@deepmineai.vip>',
         to: [to],
         subject: subject,
-        html: html
+        html: html,
+        // Add headers to improve deliverability
+        headers: {
+          'X-Entity-Ref-ID': Math.random().toString(36).substring(7),
+          'List-Unsubscribe': '<https://www.deepmineai.vip/unsubscribe>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        },
+        // Add tags for tracking
+        tags: [
+          { name: 'category', value: 'transactional' }
+        ]
       })
     })
 
