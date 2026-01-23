@@ -1090,7 +1090,11 @@ export const adminKYCPageHTML = `
 
         // Show reject form
         function showRejectForm() {
+            // Save the current ID before closing review modal
+            const savedId = currentSubmissionId;
             closeReviewModal();
+            // Restore the ID for rejection
+            currentSubmissionId = savedId;
             document.getElementById('rejectModal').classList.add('show');
         }
 
@@ -1104,6 +1108,7 @@ export const adminKYCPageHTML = `
         function closeRejectModal() {
             document.getElementById('rejectModal').classList.remove('show');
             document.getElementById('rejectionReason').value = '';
+            currentSubmissionId = null;
         }
 
         // Confirm reject
