@@ -220,28 +220,23 @@ admin.delete('/user/:id', requireAdmin, async (c) => {
       }, 400)
     }
 
-    // Delete related records first (to avoid foreign key constraints)
-    // Only delete records that are safe to delete for non-approved users
-    // Using tables that actually exist in the database
-    await DB.prepare('DELETE FROM kyc_submissions WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM daily_login_bonuses WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM user_automation_state WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM daily_checkins WHERE user_id = ?').bind(userId).run()
-    
-    // Delete referrals (only if this user was referred, not if they referred others)
-    await DB.prepare('DELETE FROM referrals WHERE referred_id = ?').bind(userId).run()
-    
-    // Delete user contracts and machines (if any)
-    await DB.prepare('DELETE FROM user_contracts WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM user_machines WHERE user_id = ?').bind(userId).run()
-
-    // Finally delete the user
-    await DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run()
+    // Instead of deleting, mark user as deleted and clear sensitive data
+    // This avoids foreign key issues while effectively removing the user
+    await DB.prepare(`
+      UPDATE users 
+      SET 
+        account_status = 'deleted',
+        email = 'deleted_' || id || '@deleted.local',
+        password_hash = 'DELETED',
+        full_name = 'Deleted User',
+        referral_code = 'DELETED_' || id,
+        kyc_status = 'deleted'
+      WHERE id = ?
+    `).bind(userId).run()
 
     return c.json({
       success: true,
-      message: 'User deleted successfully'
+      message: 'User marked as deleted successfully'
     })
   } catch (error) {
     console.error('Delete user error:', error)
@@ -649,6 +644,382 @@ admin.get('/recent-activity', async (c) => {
   } catch (error) {
     console.error('Get recent activity error:', error)
     return c.json({ success: false, message: 'Failed to get recent activity' }, 500)
+  }
+})
+
+// GET /api/admin/check-missing-commissions - Check for users with purchases but no commissions
+admin.get('/check-missing-commissions', requireAdmin, async (c) => {
+  try {
+    const { DB } = c.env as any
+
+    // Find all users with purchases but missing commissions
+    const missingCommissions = await DB.prepare(`
+      SELECT 
+        u.id as buyer_id,
+        u.email as buyer_email,
+        u.full_name as buyer_name,
+        u.referred_by,
+        ref.id as referrer_id,
+        ref.email as referrer_email,
+        ref.full_name as referrer_name,
+        COUNT(um.id) as purchase_count,
+        SUM(um.purchase_price) as total_spent,
+        (SELECT COUNT(*) FROM referral_commissions rc 
+         WHERE rc.referrer_id = ref.id AND rc.referred_id = u.id) as commission_count
+      FROM users u
+      INNER JOIN user_miners um ON um.user_id = u.id
+      LEFT JOIN users ref ON ref.referral_code = u.referred_by
+      WHERE u.referred_by IS NOT NULL
+        AND ref.id IS NOT NULL
+      GROUP BY u.id, u.email, u.full_name, u.referred_by, ref.id, ref.email, ref.full_name
+      HAVING commission_count = 0
+      ORDER BY u.id
+    `).all()
+
+    return c.json({
+      success: true,
+      count: missingCommissions.results?.length || 0,
+      missing_commissions: missingCommissions.results || []
+    })
+  } catch (error) {
+    console.error('Check missing commissions error:', error)
+    return c.json({ success: false, message: `Failed: ${error.message}` }, 500)
+  }
+})
+
+// POST /api/admin/fix-all-commissions - Fix all missing commissions
+admin.post('/fix-all-commissions', requireAdmin, async (c) => {
+  try {
+    const { DB } = c.env as any
+    const results = {
+      total_checked: 0,
+      fixed: 0,
+      skipped: 0,
+      errors: []
+    }
+
+    // Find all users with purchases but missing commissions
+    const missingCommissions = await DB.prepare(`
+      SELECT 
+        u.id as buyer_id,
+        u.referred_by,
+        ref.id as referrer_id
+      FROM users u
+      INNER JOIN user_miners um ON um.user_id = u.id
+      LEFT JOIN users ref ON ref.referral_code = u.referred_by
+      WHERE u.referred_by IS NOT NULL
+        AND ref.id IS NOT NULL
+      GROUP BY u.id, u.referred_by, ref.id
+      HAVING (SELECT COUNT(*) FROM referral_commissions rc 
+              WHERE rc.referrer_id = ref.id AND rc.referred_id = u.id) = 0
+    `).all()
+
+    results.total_checked = missingCommissions.results?.length || 0
+
+    // Fix each one
+    for (const row of (missingCommissions.results || [])) {
+      try {
+        const userId = row.buyer_id
+        const referrerId = row.referrer_id
+
+        // Build referral_tree if missing
+        const treeExists = await DB.prepare(`
+          SELECT id FROM referral_tree WHERE ancestor_id = ? AND user_id = ?
+        `).bind(referrerId, userId).first()
+
+        if (!treeExists) {
+          await DB.prepare(`
+            INSERT INTO referral_tree (user_id, ancestor_id, level)
+            VALUES (?, ?, 1)
+          `).bind(userId, referrerId).run()
+        }
+
+        // Get user's latest miner purchase
+        const miner = await DB.prepare(`
+          SELECT um.id, um.user_id, um.package_id, um.purchase_price, um.started_at, um.expires_at,
+                 mp.name, mp.price, mp.contract_days, mp.daily_return_rate
+          FROM user_miners um
+          JOIN mining_packages mp ON um.package_id = mp.id
+          WHERE um.user_id = ?
+          ORDER BY um.started_at DESC
+          LIMIT 1
+        `).bind(userId).first()
+
+        if (!miner) {
+          results.skipped++
+          continue
+        }
+
+        // Check if user_contract exists, if not create it
+        let contract = await DB.prepare(`
+          SELECT id, investment_amount, created_at
+          FROM user_contracts
+          WHERE user_id = ? AND package_id = ?
+          ORDER BY created_at DESC
+          LIMIT 1
+        `).bind(userId, miner.package_id).first()
+
+        if (!contract) {
+          // Create contract from miner data
+          const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
+          const dailyReturnAmount = miner.purchase_price * (miner.daily_return_rate / 100)
+          const totalExpectedReturn = dailyReturnAmount * miner.contract_days
+
+          await DB.prepare(`
+            INSERT INTO user_contracts (
+              user_id, package_id, contract_number, investment_amount,
+              daily_return_rate, daily_return_amount, contract_days,
+              total_expected_return, status, start_date, end_date,
+              payment_status, payment_amount, payment_currency, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, 'paid', ?, 'USDT', ?)
+          `).bind(
+            userId,
+            miner.package_id,
+            contractNumber,
+            miner.purchase_price,
+            miner.daily_return_rate,
+            dailyReturnAmount,
+            miner.contract_days,
+            totalExpectedReturn,
+            miner.started_at,
+            miner.expires_at,
+            miner.purchase_price,
+            miner.started_at
+          ).run()
+
+          contract = await DB.prepare(`
+            SELECT id, investment_amount, created_at
+            FROM user_contracts
+            WHERE user_id = ? AND package_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+          `).bind(userId, miner.package_id).first()
+        }
+
+        // Get referral_id
+        const referralTreeEntry = await DB.prepare(`
+          SELECT id FROM referral_tree
+          WHERE ancestor_id = ? AND user_id = ?
+        `).bind(referrerId, userId).first()
+
+        if (!referralTreeEntry) {
+          results.skipped++
+          continue
+        }
+
+        // Check if commission already exists
+        const existingCommission = await DB.prepare(`
+          SELECT id FROM referral_commissions
+          WHERE referrer_id = ? AND referred_id = ? AND contract_id = ?
+        `).bind(referrerId, userId, contract.id).first()
+
+        if (existingCommission) {
+          results.skipped++
+          continue
+        }
+
+        // Create commission (using old schema from migration 0001)
+        const commissionAmount = 80.00
+        await DB.prepare(`
+          INSERT INTO referral_commissions (
+            referral_id, referrer_id, referred_id, contract_id,
+            commission_amount, commission_rate, base_amount, status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `).bind(
+          referralTreeEntry.id,
+          referrerId,
+          userId,
+          contract.id,
+          commissionAmount,
+          80,
+          contract.investment_amount,
+          'pending'
+        ).run()
+
+        // Update referrals table
+        await DB.prepare(`
+          UPDATE referrals
+          SET status = 'active',
+              first_purchase_at = COALESCE(first_purchase_at, ?)
+          WHERE referrer_id = ? AND referred_id = ?
+        `).bind(contract.created_at, referrerId, userId).run()
+
+        results.fixed++
+      } catch (err) {
+        results.errors.push(`User ${row.buyer_id}: ${err.message}`)
+      }
+    }
+
+    return c.json({
+      success: true,
+      results
+    })
+  } catch (error) {
+    console.error('Fix all commissions error:', error)
+    return c.json({ success: false, message: `Failed: ${error.message}` }, 500)
+  }
+})
+
+// POST /api/admin/fix-commission/:userId - Manually fix missing commission for a user's referrer
+admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
+  try {
+    const { DB } = c.env as any
+    const userId = parseInt(c.req.param('userId'))
+
+    // Get user and their referrer
+    const user = await DB.prepare(`
+      SELECT id, referred_by FROM users WHERE id = ?
+    `).bind(userId).first()
+
+    if (!user || !user.referred_by) {
+      return c.json({ success: false, message: 'User has no referrer' }, 400)
+    }
+
+    const referrer = await DB.prepare(`
+      SELECT id, referral_code FROM users WHERE referral_code = ?
+    `).bind(user.referred_by).first()
+
+    if (!referrer) {
+      return c.json({ success: false, message: 'Referrer not found' }, 404)
+    }
+
+    // Build referral_tree if missing
+    const treeExists = await DB.prepare(`
+      SELECT id FROM referral_tree WHERE ancestor_id = ? AND user_id = ?
+    `).bind(referrer.id, userId).first()
+
+    if (!treeExists) {
+      await DB.prepare(`
+        INSERT INTO referral_tree (user_id, ancestor_id, level)
+        VALUES (?, ?, 1)
+      `).bind(userId, referrer.id).run()
+      console.log(`Created referral_tree entry: ${referrer.id} -> ${userId}`)
+    }
+
+    // Get user's latest miner purchase
+    const miner = await DB.prepare(`
+      SELECT um.id, um.user_id, um.package_id, um.purchase_price, um.started_at, um.expires_at,
+             mp.name, mp.price, mp.contract_days, mp.daily_return_rate
+      FROM user_miners um
+      JOIN mining_packages mp ON um.package_id = mp.id
+      WHERE um.user_id = ?
+      ORDER BY um.started_at DESC
+      LIMIT 1
+    `).bind(userId).first()
+
+    if (!miner) {
+      return c.json({ success: false, message: 'No purchase found for this user' }, 404)
+    }
+
+    // Check if user_contract exists for this miner, if not create it
+    let contract = await DB.prepare(`
+      SELECT id, investment_amount, created_at
+      FROM user_contracts
+      WHERE user_id = ? AND package_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `).bind(userId, miner.package_id).first()
+
+    if (!contract) {
+      // Create contract from miner data
+      const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
+      const dailyReturnAmount = miner.purchase_price * (miner.daily_return_rate / 100)
+      const totalExpectedReturn = dailyReturnAmount * miner.contract_days
+
+      await DB.prepare(`
+        INSERT INTO user_contracts (
+          user_id, package_id, contract_number, investment_amount,
+          daily_return_rate, daily_return_amount, contract_days,
+          total_expected_return, status, start_date, end_date,
+          payment_status, payment_amount, payment_currency, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, 'paid', ?, 'USDT', ?)
+      `).bind(
+        userId,
+        miner.package_id,
+        contractNumber,
+        miner.purchase_price,
+        miner.daily_return_rate,
+        dailyReturnAmount,
+        miner.contract_days,
+        totalExpectedReturn,
+        miner.started_at,
+        miner.expires_at,
+        miner.purchase_price,
+        miner.started_at
+      ).run()
+
+      // Fetch the newly created contract
+      contract = await DB.prepare(`
+        SELECT id, investment_amount, created_at
+        FROM user_contracts
+        WHERE user_id = ? AND package_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).bind(userId, miner.package_id).first()
+
+      console.log(`Created user_contract ${contract.id} for user ${userId} from miner ${miner.id}`)
+    }
+
+    // Check if commission already exists (using old schema: referrer_id, referred_id, contract_id)
+    const existingCommission = await DB.prepare(`
+      SELECT id FROM referral_commissions
+      WHERE referrer_id = ? AND referred_id = ? AND contract_id = ?
+    `).bind(referrer.id, userId, contract.id).first()
+
+    if (existingCommission) {
+      return c.json({ success: false, message: 'Commission already exists for this contract' }, 400)
+    }
+
+    // Get referral_id from referral_tree
+    const referralTreeEntry = await DB.prepare(`
+      SELECT id FROM referral_tree
+      WHERE ancestor_id = ? AND user_id = ?
+    `).bind(referrer.id, userId).first()
+
+    if (!referralTreeEntry) {
+      return c.json({ success: false, message: 'Referral tree entry not found' }, 404)
+    }
+
+    // Create the commission manually (using old schema with valid contract_id)
+    const commissionAmount = 80.00
+    await DB.prepare(`
+      INSERT INTO referral_commissions (
+        referral_id, referrer_id, referred_id, contract_id,
+        commission_amount, commission_rate, base_amount, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(
+      referralTreeEntry.id,
+      referrer.id,
+      userId,
+      contract.id,
+      commissionAmount,
+      80,
+      contract.investment_amount,
+      'pending'
+    ).run()
+
+    // Update referrals table
+    await DB.prepare(`
+      UPDATE referrals
+      SET status = 'active',
+          first_purchase_at = COALESCE(first_purchase_at, ?)
+      WHERE referrer_id = ? AND referred_id = ?
+    `).bind(contract.created_at, referrer.id, userId).run()
+
+    return c.json({
+      success: true,
+      message: `Created $${commissionAmount} commission for user ${referrer.id} (referrer of user ${userId})`,
+      commission: {
+        referrer_id: referrer.id,
+        referred_id: userId,
+        amount: commissionAmount,
+        contract_id: contract.id,
+        investment_amount: contract.investment_amount
+      }
+    })
+  } catch (error) {
+    console.error('Fix commission error:', error)
+    return c.json({ success: false, message: `Failed to fix commission: ${error.message}` }, 500)
   }
 })
 
