@@ -221,16 +221,20 @@ admin.delete('/user/:id', async (c) => {
 
     // Delete related records first (to avoid foreign key constraints)
     // Only delete records that are safe to delete for non-approved users
+    // Using tables that actually exist in the database
     await DB.prepare('DELETE FROM kyc_submissions WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM user_sessions WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM login_history WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM user_notifications WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM user_activity WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM daily_login_bonus WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM daily_login_bonuses WHERE user_id = ?').bind(userId).run()
     await DB.prepare('DELETE FROM user_automation_state WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM activity_logs WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM daily_checkins WHERE user_id = ?').bind(userId).run()
     
     // Delete referrals (only if this user was referred, not if they referred others)
     await DB.prepare('DELETE FROM referrals WHERE referred_id = ?').bind(userId).run()
+    
+    // Delete user contracts and machines (if any)
+    await DB.prepare('DELETE FROM user_contracts WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM user_machines WHERE user_id = ?').bind(userId).run()
 
     // Finally delete the user
     await DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run()
