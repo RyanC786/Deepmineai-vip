@@ -844,13 +844,12 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
           'pending'
         ).run()
 
-        // Update referrals table
+        // Update referrals table status
         await DB.prepare(`
           UPDATE referrals
-          SET status = 'active',
-              first_purchase_at = COALESCE(first_purchase_at, ?)
+          SET status = 'active'
           WHERE referrer_id = ? AND referred_id = ?
-        `).bind(contract.created_at, referrerId, userId).run()
+        `).bind(referrerId, userId).run()
 
         results.fixed++
       } catch (err) {
@@ -1014,13 +1013,12 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       'pending'
     ).run()
 
-    // Update referrals table
+    // Update referrals table status
     await DB.prepare(`
       UPDATE referrals
-      SET status = 'active',
-          first_purchase_at = COALESCE(first_purchase_at, ?)
+      SET status = 'active'
       WHERE referrer_id = ? AND referred_id = ?
-    `).bind(contract.created_at, referrer.id, userId).run()
+    `).bind(referrer.id, userId).run()
 
     return c.json({
       success: true,
