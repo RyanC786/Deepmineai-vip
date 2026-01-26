@@ -736,8 +736,9 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
 
         // Get user's latest miner purchase
         const miner = await DB.prepare(`
-          SELECT um.id, um.user_id, um.package_id, um.purchase_price, um.started_at, um.expires_at,
-                 mp.name, mp.price, mp.contract_days, mp.daily_return_rate
+          SELECT um.id, um.user_id, um.package_id, um.started_at, um.expires_at,
+                 um.hash_rate, um.daily_rate,
+                 mp.name, mp.price, mp.daily_return_rate, mp.min_contract_days
           FROM user_miners um
           JOIN mining_packages mp ON um.package_id = mp.id
           WHERE um.user_id = ?
@@ -760,10 +761,16 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
         `).bind(userId, miner.package_id).first()
 
         if (!contract) {
+          // Calculate contract days from dates
+          const startDate = new Date(miner.started_at)
+          const endDate = new Date(miner.expires_at)
+          const contractDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+          
           // Create contract from miner data
           const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
-          const dailyReturnAmount = miner.purchase_price * (miner.daily_return_rate / 100)
-          const totalExpectedReturn = dailyReturnAmount * miner.contract_days
+          const investmentAmount = miner.price // Use package price
+          const dailyReturnAmount = investmentAmount * (miner.daily_return_rate / 100)
+          const totalExpectedReturn = dailyReturnAmount * contractDays
 
           await DB.prepare(`
             INSERT INTO user_contracts (
@@ -776,14 +783,14 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
             userId,
             miner.package_id,
             contractNumber,
-            miner.purchase_price,
+            investmentAmount,
             miner.daily_return_rate,
             dailyReturnAmount,
-            miner.contract_days,
+            contractDays,
             totalExpectedReturn,
             miner.started_at,
             miner.expires_at,
-            miner.purchase_price,
+            investmentAmount,
             miner.started_at
           ).run()
 
@@ -898,8 +905,9 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
 
     // Get user's latest miner purchase
     const miner = await DB.prepare(`
-      SELECT um.id, um.user_id, um.package_id, um.purchase_price, um.started_at, um.expires_at,
-             mp.name, mp.price, mp.contract_days, mp.daily_return_rate
+      SELECT um.id, um.user_id, um.package_id, um.started_at, um.expires_at,
+             um.hash_rate, um.daily_rate,
+             mp.name, mp.price, mp.daily_return_rate, mp.min_contract_days
       FROM user_miners um
       JOIN mining_packages mp ON um.package_id = mp.id
       WHERE um.user_id = ?
@@ -921,10 +929,16 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
     `).bind(userId, miner.package_id).first()
 
     if (!contract) {
+      // Calculate contract days from dates
+      const startDate = new Date(miner.started_at)
+      const endDate = new Date(miner.expires_at)
+      const contractDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+      
       // Create contract from miner data
       const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
-      const dailyReturnAmount = miner.purchase_price * (miner.daily_return_rate / 100)
-      const totalExpectedReturn = dailyReturnAmount * miner.contract_days
+      const investmentAmount = miner.price // Use package price
+      const dailyReturnAmount = investmentAmount * (miner.daily_return_rate / 100)
+      const totalExpectedReturn = dailyReturnAmount * contractDays
 
       await DB.prepare(`
         INSERT INTO user_contracts (
@@ -937,14 +951,14 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
         userId,
         miner.package_id,
         contractNumber,
-        miner.purchase_price,
+        investmentAmount,
         miner.daily_return_rate,
         dailyReturnAmount,
-        miner.contract_days,
+        contractDays,
         totalExpectedReturn,
         miner.started_at,
         miner.expires_at,
-        miner.purchase_price,
+        investmentAmount,
         miner.started_at
       ).run()
 
