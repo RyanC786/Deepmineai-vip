@@ -986,9 +986,9 @@ export const adminKYCPageHTML = `
                 </div>
                 <div class="user-info-row">
                     <span class="user-info-label">Status:</span>
-                    <span class="status-badge \${submission.status}">
-                        <i class="fas fa-\${getStatusIcon(submission.status)}"></i>
-                        \${submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
+                    <span class="status-badge \${submission.status || 'pending'}">
+                        <i class="fas fa-\${getStatusIcon(submission.status || 'pending')}"></i>
+                        \${(submission.status || 'pending').charAt(0).toUpperCase() + (submission.status || 'pending').slice(1)}
                     </span>
                 </div>
                 <div class="user-info-row">

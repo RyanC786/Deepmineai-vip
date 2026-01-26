@@ -219,7 +219,20 @@ admin.delete('/user/:id', async (c) => {
       }, 400)
     }
 
-    // Delete user
+    // Delete related records first (to avoid foreign key constraints)
+    // Only delete records that are safe to delete for non-approved users
+    await DB.prepare('DELETE FROM kyc_submissions WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM user_sessions WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM login_history WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM user_notifications WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM user_activity WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM daily_login_bonus WHERE user_id = ?').bind(userId).run()
+    await DB.prepare('DELETE FROM user_automation_state WHERE user_id = ?').bind(userId).run()
+    
+    // Delete referrals (only if this user was referred, not if they referred others)
+    await DB.prepare('DELETE FROM referrals WHERE referred_id = ?').bind(userId).run()
+
+    // Finally delete the user
     await DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run()
 
     return c.json({
@@ -228,7 +241,7 @@ admin.delete('/user/:id', async (c) => {
     })
   } catch (error) {
     console.error('Delete user error:', error)
-    return c.json({ success: false, message: 'Failed to delete user' }, 500)
+    return c.json({ success: false, message: `Failed to delete user: ${error.message}` }, 500)
   }
 })
 
