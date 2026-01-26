@@ -227,7 +227,6 @@ admin.delete('/user/:id', requireAdmin, async (c) => {
     await DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId).run()
     await DB.prepare('DELETE FROM daily_login_bonuses WHERE user_id = ?').bind(userId).run()
     await DB.prepare('DELETE FROM user_automation_state WHERE user_id = ?').bind(userId).run()
-    await DB.prepare('DELETE FROM activity_logs WHERE user_id = ?').bind(userId).run()
     await DB.prepare('DELETE FROM daily_checkins WHERE user_id = ?').bind(userId).run()
     
     // Delete referrals (only if this user was referred, not if they referred others)
