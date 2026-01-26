@@ -975,58 +975,67 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       console.log(`Created user_contract ${contract.id} for user ${userId} from miner ${miner.id}`)
     }
 
-    // Check if commission already exists (using old schema: referrer_id, referred_id, contract_id)
-    const existingCommission = await DB.prepare(`
+    let commissionsCreated = 0
+    let totalAmount = 0
+    const commissionDetails = []
+
+    // ============================================
+    // LEVEL 1 COMMISSION: $80 flat
+    // ============================================
+    // Check if Level 1 commission already exists
+    const existingLevel1 = await DB.prepare(`
       SELECT id FROM referral_commissions
       WHERE referrer_id = ? AND referred_id = ? AND contract_id = ?
     `).bind(referrer.id, userId, contract.id).first()
 
-    if (existingCommission) {
-      return c.json({ success: false, message: 'Commission already exists for this contract' }, 400)
+    if (!existingLevel1) {
+      // Get referral_id from referral_tree
+      const referralTreeEntry = await DB.prepare(`
+        SELECT id FROM referral_tree
+        WHERE ancestor_id = ? AND user_id = ?
+      `).bind(referrer.id, userId).first()
+
+      if (!referralTreeEntry) {
+        return c.json({ success: false, message: 'Referral tree entry not found' }, 404)
+      }
+
+      // Create Level 1 commission ($80)
+      const level1Commission = 80.00
+      await DB.prepare(`
+        INSERT INTO referral_commissions (
+          referral_id, referrer_id, referred_id, contract_id,
+          commission_amount, commission_rate, base_amount, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).bind(
+        referralTreeEntry.id,
+        referrer.id,
+        userId,
+        contract.id,
+        level1Commission,
+        80,
+        contract.investment_amount,
+        'pending'
+      ).run()
+
+      // Update referrals table status
+      await DB.prepare(`
+        UPDATE referrals
+        SET status = 'active'
+        WHERE referrer_id = ? AND referred_id = ?
+      `).bind(referrer.id, userId).run()
+
+      commissionsCreated++
+      totalAmount += level1Commission
+      commissionDetails.push({
+        level: 1,
+        referrer_id: referrer.id,
+        amount: level1Commission
+      })
+
+      console.log(`Created Level 1 commission: $${level1Commission} for user ${referrer.id}`)
+    } else {
+      console.log(`Level 1 commission already exists for user ${userId}`)
     }
-
-    // Get referral_id from referral_tree
-    const referralTreeEntry = await DB.prepare(`
-      SELECT id FROM referral_tree
-      WHERE ancestor_id = ? AND user_id = ?
-    `).bind(referrer.id, userId).first()
-
-    if (!referralTreeEntry) {
-      return c.json({ success: false, message: 'Referral tree entry not found' }, 404)
-    }
-
-    // Create Level 1 commission ($80)
-    const level1Commission = 80.00
-    await DB.prepare(`
-      INSERT INTO referral_commissions (
-        referral_id, referrer_id, referred_id, contract_id,
-        commission_amount, commission_rate, base_amount, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).bind(
-      referralTreeEntry.id,
-      referrer.id,
-      userId,
-      contract.id,
-      level1Commission,
-      80,
-      contract.investment_amount,
-      'pending'
-    ).run()
-
-    // Update referrals table status
-    await DB.prepare(`
-      UPDATE referrals
-      SET status = 'active'
-      WHERE referrer_id = ? AND referred_id = ?
-    `).bind(referrer.id, userId).run()
-
-    let commissionsCreated = 1
-    let totalAmount = level1Commission
-    const commissionDetails = [{
-      level: 1,
-      referrer_id: referrer.id,
-      amount: level1Commission
-    }]
 
     // ============================================
     // LEVEL 2 COMMISSION: $15 flat
@@ -1088,6 +1097,18 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
           console.log(`Created Level 2 commission: $${level2Commission} for user ${level2Referrer.id}`)
         }
       }
+    }
+
+    if (commissionsCreated === 0) {
+      return c.json({
+        success: true,
+        message: 'All commissions already exist for this user',
+        commissions_created: 0,
+        total_amount: 0,
+        details: [],
+        contract_id: contract.id,
+        investment_amount: contract.investment_amount
+      })
     }
 
     return c.json({
