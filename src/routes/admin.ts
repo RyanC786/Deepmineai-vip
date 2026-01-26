@@ -738,7 +738,7 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
         const miner = await DB.prepare(`
           SELECT um.id, um.user_id, um.package_id, um.started_at, um.expires_at,
                  um.hash_rate, um.daily_rate,
-                 mp.name, mp.price, mp.daily_return_rate, mp.min_contract_days
+                 mp.name, mp.price, mp.daily_earnings, mp.duration_days
           FROM user_miners um
           JOIN mining_packages mp ON um.package_id = mp.id
           WHERE um.user_id = ?
@@ -769,7 +769,8 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
           // Create contract from miner data
           const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
           const investmentAmount = miner.price // Use package price
-          const dailyReturnAmount = investmentAmount * (miner.daily_return_rate / 100)
+          const dailyReturnAmount = miner.daily_earnings // From package
+          const dailyReturnRate = (dailyReturnAmount / investmentAmount) * 100 // Calculate percentage
           const totalExpectedReturn = dailyReturnAmount * contractDays
 
           await DB.prepare(`
@@ -784,7 +785,7 @@ admin.post('/fix-all-commissions', requireAdmin, async (c) => {
             miner.package_id,
             contractNumber,
             investmentAmount,
-            miner.daily_return_rate,
+            dailyReturnRate,
             dailyReturnAmount,
             contractDays,
             totalExpectedReturn,
@@ -907,7 +908,7 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
     const miner = await DB.prepare(`
       SELECT um.id, um.user_id, um.package_id, um.started_at, um.expires_at,
              um.hash_rate, um.daily_rate,
-             mp.name, mp.price, mp.daily_return_rate, mp.min_contract_days
+             mp.name, mp.price, mp.daily_earnings, mp.duration_days
       FROM user_miners um
       JOIN mining_packages mp ON um.package_id = mp.id
       WHERE um.user_id = ?
@@ -937,7 +938,8 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       // Create contract from miner data
       const contractNumber = `DM-${new Date().getFullYear()}-${String(userId).padStart(6, '0')}-${miner.id}`
       const investmentAmount = miner.price // Use package price
-      const dailyReturnAmount = investmentAmount * (miner.daily_return_rate / 100)
+      const dailyReturnAmount = miner.daily_earnings // From package
+      const dailyReturnRate = (dailyReturnAmount / investmentAmount) * 100 // Calculate percentage
       const totalExpectedReturn = dailyReturnAmount * contractDays
 
       await DB.prepare(`
@@ -952,7 +954,7 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
         miner.package_id,
         contractNumber,
         investmentAmount,
-        miner.daily_return_rate,
+        dailyReturnRate,
         dailyReturnAmount,
         contractDays,
         totalExpectedReturn,
