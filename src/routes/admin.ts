@@ -883,7 +883,7 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
     }
 
     const referrer = await DB.prepare(`
-      SELECT id, referral_code FROM users WHERE referral_code = ?
+      SELECT id, referral_code, referred_by FROM users WHERE referral_code = ?
     `).bind(user.referred_by).first()
 
     if (!referrer) {
