@@ -995,8 +995,8 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       return c.json({ success: false, message: 'Referral tree entry not found' }, 404)
     }
 
-    // Create the commission manually (using old schema with valid contract_id)
-    const commissionAmount = 80.00
+    // Create Level 1 commission ($80)
+    const level1Commission = 80.00
     await DB.prepare(`
       INSERT INTO referral_commissions (
         referral_id, referrer_id, referred_id, contract_id,
@@ -1007,7 +1007,7 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       referrer.id,
       userId,
       contract.id,
-      commissionAmount,
+      level1Commission,
       80,
       contract.investment_amount,
       'pending'
@@ -1020,16 +1020,84 @@ admin.post('/fix-commission/:userId', requireAdmin, async (c) => {
       WHERE referrer_id = ? AND referred_id = ?
     `).bind(referrer.id, userId).run()
 
+    let commissionsCreated = 1
+    let totalAmount = level1Commission
+    const commissionDetails = [{
+      level: 1,
+      referrer_id: referrer.id,
+      amount: level1Commission
+    }]
+
+    // ============================================
+    // LEVEL 2 COMMISSION: $15 flat
+    // ============================================
+    if (referrer.referred_by) {
+      const level2Referrer = await DB.prepare(`
+        SELECT id, referral_code, referred_by FROM users WHERE referral_code = ?
+      `).bind(referrer.referred_by).first()
+
+      if (level2Referrer) {
+        // Build referral_tree for level 2 if missing
+        const level2TreeExists = await DB.prepare(`
+          SELECT id FROM referral_tree WHERE ancestor_id = ? AND user_id = ?
+        `).bind(level2Referrer.id, userId).first()
+
+        if (!level2TreeExists) {
+          await DB.prepare(`
+            INSERT INTO referral_tree (user_id, ancestor_id, level)
+            VALUES (?, ?, 2)
+          `).bind(userId, level2Referrer.id).run()
+        }
+
+        const level2TreeEntry = await DB.prepare(`
+          SELECT id FROM referral_tree WHERE ancestor_id = ? AND user_id = ?
+        `).bind(level2Referrer.id, userId).first()
+
+        // Check if Level 2 commission already exists
+        const existingLevel2 = await DB.prepare(`
+          SELECT id FROM referral_commissions
+          WHERE referrer_id = ? AND referred_id = ? AND contract_id = ?
+        `).bind(level2Referrer.id, userId, contract.id).first()
+
+        if (!existingLevel2 && level2TreeEntry) {
+          const level2Commission = 15.00
+          await DB.prepare(`
+            INSERT INTO referral_commissions (
+              referral_id, referrer_id, referred_id, contract_id,
+              commission_amount, commission_rate, base_amount, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `).bind(
+            level2TreeEntry.id,
+            level2Referrer.id,
+            userId,
+            contract.id,
+            level2Commission,
+            15,
+            contract.investment_amount,
+            'pending'
+          ).run()
+
+          commissionsCreated++
+          totalAmount += level2Commission
+          commissionDetails.push({
+            level: 2,
+            referrer_id: level2Referrer.id,
+            amount: level2Commission
+          })
+
+          console.log(`Created Level 2 commission: $${level2Commission} for user ${level2Referrer.id}`)
+        }
+      }
+    }
+
     return c.json({
       success: true,
-      message: `Created $${commissionAmount} commission for user ${referrer.id} (referrer of user ${userId})`,
-      commission: {
-        referrer_id: referrer.id,
-        referred_id: userId,
-        amount: commissionAmount,
-        contract_id: contract.id,
-        investment_amount: contract.investment_amount
-      }
+      message: `Created ${commissionsCreated} commission(s) totaling $${totalAmount.toFixed(2)}`,
+      commissions_created: commissionsCreated,
+      total_amount: totalAmount,
+      details: commissionDetails,
+      contract_id: contract.id,
+      investment_amount: contract.investment_amount
     })
   } catch (error) {
     console.error('Fix commission error:', error)
