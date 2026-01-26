@@ -887,17 +887,31 @@ export const adminKYCPageHTML = `
                     <td>\${new Date(sub.submitted_at).toLocaleDateString()}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn btn-view" onclick="viewSubmission(\${sub.id})">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            \${status === 'pending' || status === 'reviewing' ? \`
-                                <button class="btn btn-approve" onclick="quickApprove(\${sub.id})">
-                                    <i class="fas fa-check"></i> Approve
+                            \${sub.id && sub.applicant_id ? \`
+                                <button class="btn btn-view" onclick="viewSubmission(\${sub.id})">
+                                    <i class="fas fa-eye"></i> View
                                 </button>
-                                <button class="btn btn-reject" onclick="quickReject(\${sub.id})">
-                                    <i class="fas fa-times"></i> Reject
+                                \${status === 'pending' || status === 'reviewing' ? \`
+                                    <button class="btn btn-approve" onclick="quickApprove(\${sub.id})">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-reject" onclick="quickReject(\${sub.id})">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                \` : ''}
+                            \` : sub.kyc_status === 'approved' ? \`
+                                <span style="color: #10b981; font-weight: 600;">
+                                    <i class="fas fa-check-circle"></i> Approved
+                                </span>
+                            \` : \`
+                                <span style="color: #888; font-style: italic; margin-right: 10px;">
+                                    <i class="fas fa-info-circle"></i> Not Completed iDenfy
+                                </span>
+                                <button class="btn btn-danger" onclick="deleteUser(\${sub.user_id}, '\${sub.full_name}')" 
+                                        style="background: #dc2626; font-size: 12px; padding: 6px 12px;">
+                                    <i class="fas fa-trash"></i> Delete User
                                 </button>
-                            \` : ''}
+                            \`}
                         </div>
                     </td>
                 \`;
@@ -1100,7 +1114,9 @@ export const adminKYCPageHTML = `
 
         // Quick reject
         function quickReject(id) {
+            console.log('🔴 quickReject called with ID:', id);
             currentSubmissionId = id;
+            console.log('🔴 currentSubmissionId set to:', currentSubmissionId);
             document.getElementById('rejectModal').classList.add('show');
         }
 
@@ -1113,12 +1129,15 @@ export const adminKYCPageHTML = `
 
         // Confirm reject
         async function confirmReject() {
+            console.log('🔴 confirmReject called, currentSubmissionId:', currentSubmissionId);
             const reason = document.getElementById('rejectionReason').value.trim();
 
             if (!reason) {
                 alert('Please provide a rejection reason');
                 return;
             }
+
+            console.log('🔴 About to fetch with ID:', currentSubmissionId, 'URL:', '/api/kyc/admin/' + currentSubmissionId + '/reject');
 
             try {
                 const response = await fetch(\`/api/kyc/admin/\${currentSubmissionId}/reject\`, {
@@ -1140,6 +1159,42 @@ export const adminKYCPageHTML = `
                 }
             } catch (error) {
                 console.error('Reject failed:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Delete user (for users who haven't submitted KYC)
+        async function deleteUser(userId, userName) {
+            const confirmed = confirm('WARNING: DELETE USER ACCOUNT?\\n\\nUser: ' + userName + ' (ID: ' + userId + ')\\nStatus: No KYC submission\\n\\nThis will permanently delete:\\n- User account\\n- All associated data\\n\\nThis action CANNOT be undone!\\n\\nAre you absolutely sure?');
+            
+            if (!confirmed) {
+                return;
+            }
+
+            // Second confirmation
+            const doubleCheck = confirm('FINAL CONFIRMATION\\n\\nDelete ' + userName + '?\\n\\nClick OK to proceed.');
+            if (!doubleCheck) {
+                return;
+            }
+
+            try {
+                const response = await fetch(\`/api/admin/user/\${userId}\`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('User ' + userName + ' deleted successfully');
+                    loadSubmissions();
+                } else {
+                    alert('Failed to delete user: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Delete user error:', error);
                 alert('Network error. Please try again.');
             }
         }
