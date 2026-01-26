@@ -1182,7 +1182,8 @@ export const adminKYCPageHTML = `
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'include'  // Include cookies for admin auth
                 });
 
                 const data = await response.json();

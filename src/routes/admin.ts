@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { requireAdmin } from '../middleware/auth'
 
 const admin = new Hono()
 
@@ -187,7 +188,7 @@ admin.post('/user/:id/status', async (c) => {
 })
 
 // DELETE /api/admin/user/:id - Delete user (only if KYC is pending/rejected and no active miners)
-admin.delete('/user/:id', async (c) => {
+admin.delete('/user/:id', requireAdmin, async (c) => {
   try {
     const { DB } = c.env as any
     const userId = parseInt(c.req.param('id'))
